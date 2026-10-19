@@ -1,0 +1,38 @@
+# AI Technical Document Reviewer
+
+An educational project that reviews technical documents with local LLMs.
+
+## What it does
+
+1. Extracts text from a PDF (or accepts plain text).
+2. `Analyzer` identifies actionable issues.
+3. `Writer` revises the document.
+4. `Reviewer` approves the revision or sends it back to the writer.
+5. LangGraph limits revision attempts and preserves workflow state.
+
+## Quick start
+
+```bash
+cp .env.example .env
+uv sync --group dev
+ollama serve # separate terminal, if it is not already running
+ollama pull qwen3:8b
+uv run python -m document_reviewer.cli examples/sample_readme.md
+```
+
+Run tests with `uv run pytest`.
+
+## API
+
+```bash
+uv run python apps/api/manage.py runserver
+curl -F "file=@examples/sample.pdf" http://127.0.0.1:8000/api/reviews/
+```
+
+`POST /api/reviews/` accepts a text-based PDF or `text` form field. The result includes the
+analysis, revised document, final review, and revision count.
+
+## Learning path
+
+Start in `src/document_reviewer/agents.py`, then follow the state through
+`src/document_reviewer/graph.py`. RAG and LoRA instructions live in `docs/` and `training/`.

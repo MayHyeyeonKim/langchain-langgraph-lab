@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.pytest_cache/
+.coverage
+db.sqlite3
+media/
+chroma_db/
+*.egg-info/
+
+examples/
