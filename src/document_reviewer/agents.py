@@ -1,5 +1,6 @@
 """Role-specific LangChain agents. Pydantic keeps their hand-offs predictable."""
 
+import json
 from collections.abc import Callable
 from typing import Protocol, TypeVar
 
@@ -25,8 +26,41 @@ class OllamaDocumentAgents:
         self.model = model_factory()
 
     def _structured(self, schema: type[StructuredModel], system: str, prompt: str) -> StructuredModel:
-        structured_model = self.model.with_structured_output(schema)
-        result = structured_model.invoke([SystemMessage(system), HumanMessage(prompt)])
+        contracts = {
+            AnalysisReport: {
+                "summary": "string",
+                "issues": [
+                    {
+                        "title": "string",
+                        "severity": "low | medium | high",
+                        "evidence": "string",
+                        "recommendation": "string",
+                    }
+                ],
+            },
+            ReviewResult: {
+                "approved": "boolean",
+                "summary": "string",
+                "remaining_issues": [
+                    {
+                        "title": "string",
+                        "severity": "low | medium | high",
+                        "evidence": "string",
+                        "recommendation": "string",
+                    }
+                ],
+            },
+        }
+        contract = json.dumps(contracts[schema])
+        structured_model = self.model.with_structured_output(schema, method="json_mode")
+        result = structured_model.invoke(
+            [
+                SystemMessage(
+                    f"{system}\n\nReturn only one JSON object with this exact shape: {contract}"
+                ),
+                HumanMessage(prompt),
+            ]
+        )
         if isinstance(result, schema):
             return result
         return schema.model_validate(result)
@@ -34,8 +68,12 @@ class OllamaDocumentAgents:
     def analyze(self, document: str, context: str = "") -> AnalysisReport:
         return self._structured(
             AnalysisReport,
-            "You are a precise technical-document analyzer. Find concrete problems in clarity, "
-            "completeness, accuracy, structure, and usability. Do not invent facts.",
+            "You are a precise technical-document analyzer. Find only concrete documentation "
+            "problems in clarity, completeness, accuracy, structure, and usability. Do not infer "
+            "or speculate about the software itself. Every issue's evidence must be a verbatim "
+            "quote from the document; report an empty issues list if none are supported. Return at "
+            "most two issues and keep every value concise. For a README, assess installation/setup "
+            "instructions and API usage details when those topics are relevant.",
             f"Analyze this technical document:\n\n{document}\n\nReference context:\n{context or 'None provided.'}",
         )
 

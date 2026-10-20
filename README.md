@@ -17,6 +17,10 @@ cp .env.example .env
 uv sync --group dev
 ollama serve # separate terminal, if it is not already running
 ollama pull qwen3:8b
+# Verify just the Analyzer before running the complete Writer/Reviewer workflow.
+uv run python -m document_reviewer.cli --analyze-only examples/sample_readme.md
+
+# Run the full workflow after the Analyzer result looks sound.
 uv run python -m document_reviewer.cli examples/sample_readme.md
 ```
 

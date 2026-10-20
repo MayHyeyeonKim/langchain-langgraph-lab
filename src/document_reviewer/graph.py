@@ -25,6 +25,7 @@ class ReviewWorkflow:
     """A testable workflow; pass fake agents in tests and Ollama agents in production."""
 
     def __init__(self, agents: DocumentAgents | None = None, max_retries: int | None = None) -> None: # TypeScript의 constructor()와 같은 역할
+        self.agents = agents or OllamaDocumentAgents()
         self.max_retries = max_retries if max_retries is not None else settings.max_retries
         self.graph = self._build()
 

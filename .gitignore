@@ -9,4 +9,5 @@ media/
 chroma_db/
 *.egg-info/
 
-examples/
+examples/* 
+!examples/sample_readme.md
