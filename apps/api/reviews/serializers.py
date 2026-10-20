@@ -1,10 +1,11 @@
-from rest_framework import serializers # DRF(Django REST Framework)에서 데이터를 변환하고 검증하는 역할 가져옴
+# DRF(Django REST Framework)에서 데이터를 변환하고 검증하는 역할 가져옴
+from rest_framework import serializers
 
 
 class ReviewRequestSerializer(serializers.Serializer): # Serializer를 상속받아 리뷰 요청을 검증하는 클래스
     file = serializers.FileField(required=False, allow_empty_file=False) # 파일을 받고
     text = serializers.CharField(required=False, allow_blank=False) # 텍스트를 받음
-    max_retries = serializers.IntegerField(required=False, min_value=1, max_value=5) # 최대 재시도 횟수
+    max_retries = serializers.IntegerField(required=False, min_value=0, max_value=5) # 최대 재시도 횟수
     reference_files = serializers.ListField(child=serializers.FileField(), required=False) # 참고 파일들    
 
     def validate(self, attrs): # 현재 객체(self)에서 입력 데이터(attrs) 전체를 검증하는 메서드를 정의

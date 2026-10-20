@@ -31,6 +31,7 @@ def test_api_accepts_text(mock_workflow) -> None:
         revision_count=1,
         completed=True,
     )
-    response = Client().post("/api/reviews/", {"text": "text"})
+    response = Client().post("/api/reviews/", {"text": "text", "max_retries": 0})
     assert response.status_code == 200
     assert response.json()["completed"] is True
+    mock_workflow.assert_called_once_with(max_retries=0)
