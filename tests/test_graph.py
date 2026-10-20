@@ -7,7 +7,7 @@ class FakeAgents:
         self.approvals = iter(approvals)
         self.writes = 0
 
-    def analyze(self, document: str) -> AnalysisReport:
+    def analyze(self, document: str, context: str = "") -> AnalysisReport:
         return AnalysisReport(
             summary="One missing instruction.",
             issues=[Issue(title="Missing setup", severity=Severity.MEDIUM, evidence="Run", recommendation="Add command")],
@@ -17,7 +17,7 @@ class FakeAgents:
         self.writes += 1
         return f"{document}\n\nRevision {self.writes}"
 
-    def review(self, original: str, revised: str) -> ReviewResult:
+    def review(self, original: str, revised: str, context: str = "") -> ReviewResult:
         approved = next(self.approvals)
         return ReviewResult(approved=approved, summary="ok" if approved else "Needs work")
 

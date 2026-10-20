@@ -29,6 +29,11 @@ class ReviewResult(BaseModel):
     remaining_issues: list[Issue] = Field(default_factory=list)
 
 
+class SourceReference(BaseModel): # Source Attribution(출처 표시)
+    source: str = Field(min_length=1)
+    page: int | None = Field(default=None, ge=1)
+
+
 class WorkflowResult(BaseModel):
     original_document: str
     analysis: AnalysisReport
@@ -37,3 +42,4 @@ class WorkflowResult(BaseModel):
     revision_count: int
     completed: bool
     failure_reason: str | None = None
+    sources: list[SourceReference] = Field(default_factory=list) 

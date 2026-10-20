@@ -5,12 +5,14 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from .agents import DocumentAgents, OllamaDocumentAgents
-from .schemas import AnalysisReport, ReviewResult, WorkflowResult
+from .schemas import AnalysisReport, ReviewResult, SourceReference, WorkflowResult
 from .settings import settings
 
 
 class ReviewState(TypedDict, total=False):
     original_document: str
+    reference_context: str
+    sources: list[SourceReference]
     analysis: AnalysisReport
     revised_document: str
     review: ReviewResult
@@ -22,8 +24,7 @@ class ReviewState(TypedDict, total=False):
 class ReviewWorkflow:
     """A testable workflow; pass fake agents in tests and Ollama agents in production."""
 
-    def __init__(self, agents: DocumentAgents | None = None, max_retries: int | None = None) -> None:
-        self.agents = agents or OllamaDocumentAgents()
+    def __init__(self, agents: DocumentAgents | None = None, max_retries: int | None = None) -> None: # TypeScript의 constructor()와 같은 역할
         self.max_retries = max_retries if max_retries is not None else settings.max_retries
         self.graph = self._build()
 
@@ -45,7 +46,11 @@ class ReviewWorkflow:
         return builder.compile()
 
     def _analyze(self, state: ReviewState) -> ReviewState:
-        return {"analysis": self.agents.analyze(state["original_document"])}
+        return {
+            "analysis": self.agents.analyze(
+                state["original_document"], state.get("reference_context", "")
+            )
+        }
 
     def _write(self, state: ReviewState) -> ReviewState:
         previous_review = state.get("review")
@@ -57,7 +62,9 @@ class ReviewWorkflow:
         }
 
     def _review(self, state: ReviewState) -> ReviewState:
-        result = self.agents.review(state["original_document"], state["revised_document"])
+        result = self.agents.review(
+            state["original_document"], state["revised_document"], state.get("reference_context", "")
+        )
         return {"review": result, "completed": result.approved}
 
     def _next_after_review(self, state: ReviewState) -> str:
@@ -73,8 +80,20 @@ class ReviewWorkflow:
             "failure_reason": f"Review did not pass after {state['revision_count']} revision(s).",
         }
 
-    def run(self, document: str) -> WorkflowResult:
-        state = self.graph.invoke({"original_document": document, "revision_count": 0})
+    def run(
+        self,
+        document: str,
+        reference_context: str = "",
+        sources: list[SourceReference] | None = None,
+    ) -> WorkflowResult:
+        state = self.graph.invoke(
+            {
+                "original_document": document,
+                "reference_context": reference_context,
+                "sources": sources or [],
+                "revision_count": 0,
+            }
+        )
         return WorkflowResult(
             original_document=state["original_document"],
             analysis=state["analysis"],
@@ -83,4 +102,5 @@ class ReviewWorkflow:
             revision_count=state["revision_count"],
             completed=state.get("completed", False),
             failure_reason=state.get("failure_reason"),
+            sources=state.get("sources", []),
         )

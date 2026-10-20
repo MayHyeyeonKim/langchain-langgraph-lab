@@ -13,9 +13,9 @@ StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
 
 
 class DocumentAgents(Protocol):
-    def analyze(self, document: str) -> AnalysisReport: ...
+    def analyze(self, document: str, context: str = "") -> AnalysisReport: ...
     def rewrite(self, document: str, analysis: AnalysisReport, review: ReviewResult | None = None) -> str: ...
-    def review(self, original: str, revised: str) -> ReviewResult: ...
+    def review(self, original: str, revised: str, context: str = "") -> ReviewResult: ...
 
 
 class OllamaDocumentAgents:
@@ -31,12 +31,12 @@ class OllamaDocumentAgents:
             return result
         return schema.model_validate(result)
 
-    def analyze(self, document: str) -> AnalysisReport:
+    def analyze(self, document: str, context: str = "") -> AnalysisReport:
         return self._structured(
             AnalysisReport,
             "You are a precise technical-document analyzer. Find concrete problems in clarity, "
             "completeness, accuracy, structure, and usability. Do not invent facts.",
-            f"Analyze this technical document:\n\n{document}",
+            f"Analyze this technical document:\n\n{document}\n\nReference context:\n{context or 'None provided.'}",
         )
 
     def rewrite(
@@ -57,10 +57,10 @@ class OllamaDocumentAgents:
         )
         return str(response.content).strip()
 
-    def review(self, original: str, revised: str) -> ReviewResult:
+    def review(self, original: str, revised: str, context: str = "") -> ReviewResult:
         return self._structured(
             ReviewResult,
             "You are a strict technical-document reviewer. Approve only if the revised document "
             "is clearer, complete enough for its stated purpose, and does not add unsupported claims.",
-            f"Original:\n{original}\n\nRevised:\n{revised}",
+            f"Original:\n{original}\n\nRevised:\n{revised}\n\nReference context:\n{context or 'None provided.'}",
         )

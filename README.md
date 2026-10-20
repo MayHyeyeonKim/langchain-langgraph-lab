@@ -32,6 +32,17 @@ curl -F "file=@examples/sample.pdf" http://127.0.0.1:8000/api/reviews/
 `POST /api/reviews/` accepts a text-based PDF or `text` form field. The result includes the
 analysis, revised document, final review, and revision count.
 
+Optionally attach one or more `reference_files` (text-based PDFs) to enable local RAG. Install
+the extra dependencies and embedding model first:
+
+```bash
+uv sync --group rag
+ollama pull nomic-embed-text
+```
+
+The API creates a request-scoped local Chroma index, retrieves relevant chunks, gives them to the
+Analyzer and Reviewer, and returns the source filenames/pages used in the response.
+
 ## Learning path
 
 Start in `src/document_reviewer/agents.py`, then follow the state through

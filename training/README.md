@@ -8,3 +8,12 @@ Do not start fine-tuning until the base workflow has repeatable tests and review
 4. Train LoRA adapters, compare them with the base model on the held-out set, and only then explore a compatible Ollama export.
 
 The optional `training` dependency group deliberately stays separate from the application runtime.
+
+## First safe exercise
+
+```bash
+uv run python training/prepare_dataset.py training/example_dataset.jsonl
+```
+
+Every row uses three non-empty strings: `instruction`, `input`, and `output`. Build a held-out
+evaluation set before training; do not train and assess the model on the same examples.
