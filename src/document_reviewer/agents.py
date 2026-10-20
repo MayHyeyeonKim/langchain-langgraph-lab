@@ -85,7 +85,10 @@ class OllamaDocumentAgents:
             [
                 SystemMessage(
                     "You are a technical writer. Return only a complete revised document in Markdown. "
-                    "Preserve accurate information; do not claim unprovided facts."
+                    "Keep it under 200 words. Preserve accurate information; do not claim unprovided facts. "
+                    "Do not add endpoint paths, HTTP methods, request bodies, dependencies, prerequisites, "
+                    "or response formats unless they appear in the original document or supplied feedback. "
+                    "When needed details are unknown, state that they are not specified rather than inventing them."
                 ),
                 HumanMessage(
                     f"Original document:\n{document}\n\nAnalysis:\n{analysis.model_dump_json()}"
@@ -99,6 +102,9 @@ class OllamaDocumentAgents:
         return self._structured(
             ReviewResult,
             "You are a strict technical-document reviewer. Approve only if the revised document "
-            "is clearer, complete enough for its stated purpose, and does not add unsupported claims.",
+            "is clearer, complete enough for its stated purpose, and does not add unsupported claims. "
+            "Reject any endpoint path, HTTP method, request body, dependency, prerequisite, response format, "
+            "or other factual detail that is absent from both the original document and reference context. "
+            "Every remaining issue must quote the unsupported or incomplete text verbatim.",
             f"Original:\n{original}\n\nRevised:\n{revised}\n\nReference context:\n{context or 'None provided.'}",
         )
