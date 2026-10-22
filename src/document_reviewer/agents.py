@@ -12,7 +12,10 @@ from .llm import get_chat_model
 from .schemas import AnalysisReport, Issue, ReviewResult, Severity
 
 StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
-INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
+INLINE_CODE_PATTERN = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
+OUTER_MARKDOWN_FENCE_PATTERN = re.compile(
+    r"^```(?:markdown|md)\s*\n(?P<document>.*)\n```$", re.DOTALL | re.IGNORECASE
+)
 
 
 class DocumentAgents(Protocol):
@@ -99,7 +102,9 @@ class OllamaDocumentAgents:
                 ),
             ]
         )
-        return str(response.content).strip()
+        revised = str(response.content).strip()
+        fence_match = OUTER_MARKDOWN_FENCE_PATTERN.fullmatch(revised)
+        return fence_match.group("document").strip() if fence_match else revised
 
     def review(self, original: str, revised: str, context: str = "") -> ReviewResult:
         result = self._structured(

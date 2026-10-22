@@ -5,12 +5,13 @@ from document_reviewer.schemas import AnalysisReport, Issue, ReviewResult, Sever
 
 
 class RecordingModel:
-    def __init__(self) -> None:
+    def __init__(self, content: str = "# Revised document") -> None:
         self.messages = []
+        self.content = content
 
     def invoke(self, messages):
         self.messages = messages
-        return SimpleNamespace(content="# Revised document")
+        return SimpleNamespace(content=self.content)
 
 
 class RecordingStructuredModel(RecordingModel):
@@ -38,6 +39,15 @@ def test_writer_prompt_prohibits_unsupported_document_details() -> None:
     system_prompt = model.messages[0].content
     assert "Do not add endpoint paths" in system_prompt
     assert "dependencies" in system_prompt
+
+
+def test_writer_removes_an_outer_markdown_fence() -> None:
+    model = RecordingModel("```markdown\n# Revised document\n\nRun `python app.py`.\n```")
+    agents = OllamaDocumentAgents(model_factory=lambda: model)
+
+    revised = agents.rewrite("Original", AnalysisReport(summary="Needs more detail"))
+
+    assert revised == "# Revised document\n\nRun `python app.py`."
 
 
 def test_reviewer_prompt_rejects_unsupported_claims() -> None:
