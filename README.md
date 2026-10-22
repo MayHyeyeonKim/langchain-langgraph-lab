@@ -45,7 +45,15 @@ ollama pull nomic-embed-text
 ```
 
 The API creates a request-scoped local Chroma index, retrieves relevant chunks, gives them to the
-Analyzer and Reviewer, and returns the source filenames/pages used in the response.
+Analyzer, Writer, and Reviewer, and returns the source filenames/pages used in the response.
+
+Try the included RAG example with an incomplete document PDF and the factual reference PDF:
+
+```bash
+curl -F "file=@your-incomplete-readme.pdf" \
+  -F "reference_files=@examples/tiny_tasks_api_reference.pdf" \
+  http://127.0.0.1:8000/api/reviews/
+```
 
 ## Learning path
 

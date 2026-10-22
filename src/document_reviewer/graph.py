@@ -57,7 +57,10 @@ class ReviewWorkflow:
         previous_review = state.get("review")
         return {
             "revised_document": self.agents.rewrite(
-                state["original_document"], state["analysis"], previous_review
+                state["original_document"],
+                state["analysis"],
+                previous_review,
+                state.get("reference_context", ""),
             ),
             "revision_count": state.get("revision_count", 0) + 1,
         }

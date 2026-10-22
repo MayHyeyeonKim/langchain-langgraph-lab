@@ -20,7 +20,13 @@ OUTER_MARKDOWN_FENCE_PATTERN = re.compile(
 
 class DocumentAgents(Protocol):
     def analyze(self, document: str, context: str = "") -> AnalysisReport: ...
-    def rewrite(self, document: str, analysis: AnalysisReport, review: ReviewResult | None = None) -> str: ...
+    def rewrite(
+        self,
+        document: str,
+        analysis: AnalysisReport,
+        review: ReviewResult | None = None,
+        context: str = "",
+    ) -> str: ...
     def review(self, original: str, revised: str, context: str = "") -> ReviewResult: ...
 
 
@@ -83,7 +89,11 @@ class OllamaDocumentAgents:
         )
 
     def rewrite(
-        self, document: str, analysis: AnalysisReport, review: ReviewResult | None = None
+        self,
+        document: str,
+        analysis: AnalysisReport,
+        review: ReviewResult | None = None,
+        context: str = "",
     ) -> str:
         feedback = review.model_dump_json() if review else "No previous review; address the analysis."
         response = self.model.invoke(
@@ -91,7 +101,8 @@ class OllamaDocumentAgents:
                 SystemMessage(
                     "You are a conservative technical copy editor. Return only a complete revised document "
                     "in Markdown, under 200 words. Preserve accurate information; do not add claims. "
-                    "Use only facts and inline-code snippets that occur verbatim in the original document. "
+                    "Use only facts and inline-code snippets that occur verbatim in the original document "
+                    "or labelled reference context. "
                     "Reviewer feedback identifies problems but never supplies new facts. Do not add endpoint paths, "
                     "HTTP methods, request bodies, dependencies, prerequisites, commands, or response formats. "
                     "When needed details are unknown, add a plain-text TODO requesting that documentation instead."
@@ -99,6 +110,7 @@ class OllamaDocumentAgents:
                 HumanMessage(
                     f"Original document:\n{document}\n\nAnalysis:\n{analysis.model_dump_json()}"
                     f"\n\nReviewer feedback:\n{feedback}"
+                    f"\n\nReference context:\n{context or 'None provided.'}"
                 ),
             ]
         )

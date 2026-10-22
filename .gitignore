@@ -11,3 +11,4 @@ chroma_db/
 
 examples/* 
 !examples/sample_readme.md
+!examples/tiny_tasks_api_reference.pdf

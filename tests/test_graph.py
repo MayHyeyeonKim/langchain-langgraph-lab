@@ -6,6 +6,7 @@ class FakeAgents:
     def __init__(self, approvals: list[bool]) -> None:
         self.approvals = iter(approvals)
         self.writes = 0
+        self.write_contexts: list[str] = []
 
     def analyze(self, document: str, context: str = "") -> AnalysisReport:
         return AnalysisReport(
@@ -13,8 +14,15 @@ class FakeAgents:
             issues=[Issue(title="Missing setup", severity=Severity.MEDIUM, evidence="Run", recommendation="Add command")],
         )
 
-    def rewrite(self, document: str, analysis: AnalysisReport, review: ReviewResult | None = None) -> str:
+    def rewrite(
+        self,
+        document: str,
+        analysis: AnalysisReport,
+        review: ReviewResult | None = None,
+        context: str = "",
+    ) -> str:
         self.writes += 1
+        self.write_contexts.append(context)
         return f"{document}\n\nRevision {self.writes}"
 
     def review(self, original: str, revised: str, context: str = "") -> ReviewResult:
@@ -35,3 +43,11 @@ def test_workflow_stops_after_retry_limit() -> None:
     assert result.completed is False
     assert result.revision_count == 2
     assert result.failure_reason == "Review did not pass after 2 revision(s)."
+
+
+def test_workflow_passes_reference_context_to_writer() -> None:
+    agents = FakeAgents([True])
+
+    ReviewWorkflow(agents=agents, max_retries=1).run("Document", reference_context="Reference facts")
+
+    assert agents.write_contexts == ["Reference facts"]

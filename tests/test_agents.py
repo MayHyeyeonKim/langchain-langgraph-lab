@@ -39,6 +39,7 @@ def test_writer_prompt_prohibits_unsupported_document_details() -> None:
     system_prompt = model.messages[0].content
     assert "Do not add endpoint paths" in system_prompt
     assert "dependencies" in system_prompt
+    assert "Reference context:\nNone provided." in model.messages[1].content
 
 
 def test_writer_removes_an_outer_markdown_fence() -> None:
