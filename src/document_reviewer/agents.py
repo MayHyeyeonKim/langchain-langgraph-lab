@@ -1,6 +1,7 @@
 """Role-specific LangChain agents. Pydantic keeps their hand-offs predictable."""
 
 import json
+import re
 from collections.abc import Callable
 from typing import Protocol, TypeVar
 
@@ -8,9 +9,10 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from .llm import get_chat_model
-from .schemas import AnalysisReport, ReviewResult
+from .schemas import AnalysisReport, Issue, ReviewResult, Severity
 
 StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
+INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
 
 
 class DocumentAgents(Protocol):
@@ -84,11 +86,12 @@ class OllamaDocumentAgents:
         response = self.model.invoke(
             [
                 SystemMessage(
-                    "You are a technical writer. Return only a complete revised document in Markdown. "
-                    "Keep it under 200 words. Preserve accurate information; do not claim unprovided facts. "
-                    "Do not add endpoint paths, HTTP methods, request bodies, dependencies, prerequisites, "
-                    "or response formats unless they appear in the original document or supplied feedback. "
-                    "When needed details are unknown, state that they are not specified rather than inventing them."
+                    "You are a conservative technical copy editor. Return only a complete revised document "
+                    "in Markdown, under 200 words. Preserve accurate information; do not add claims. "
+                    "Use only facts and inline-code snippets that occur verbatim in the original document. "
+                    "Reviewer feedback identifies problems but never supplies new facts. Do not add endpoint paths, "
+                    "HTTP methods, request bodies, dependencies, prerequisites, commands, or response formats. "
+                    "When needed details are unknown, add a plain-text TODO requesting that documentation instead."
                 ),
                 HumanMessage(
                     f"Original document:\n{document}\n\nAnalysis:\n{analysis.model_dump_json()}"
@@ -99,7 +102,7 @@ class OllamaDocumentAgents:
         return str(response.content).strip()
 
     def review(self, original: str, revised: str, context: str = "") -> ReviewResult:
-        return self._structured(
+        result = self._structured(
             ReviewResult,
             "You are a strict technical-document reviewer. Approve only if the revised document "
             "is clearer, complete enough for its stated purpose, and does not add unsupported claims. "
@@ -108,3 +111,28 @@ class OllamaDocumentAgents:
             "Every remaining issue must quote the unsupported or incomplete text verbatim.",
             f"Original:\n{original}\n\nRevised:\n{revised}\n\nReference context:\n{context or 'None provided.'}",
         )
+        issues = [*result.remaining_issues, *self._unsupported_code_issues(original, revised, context)]
+        if not issues:
+            return result
+        summary = result.summary
+        if result.approved:
+            summary = f"{summary} Approval changed to false because unresolved issues remain."
+        return result.model_copy(update={"approved": False, "summary": summary, "remaining_issues": issues})
+
+    @staticmethod
+    def _unsupported_code_issues(original: str, revised: str, context: str) -> list[Issue]:
+        known_text = f"{original}\n{context}"
+        unsupported = {
+            literal.strip()
+            for literal in INLINE_CODE_PATTERN.findall(revised)
+            if literal.strip() and literal.strip() not in known_text
+        }
+        return [
+            Issue(
+                title="Unsupported code detail",
+                severity=Severity.HIGH,
+                evidence=f"`{literal}`",
+                recommendation="Remove this detail or provide it in the original document or reference context.",
+            )
+            for literal in sorted(unsupported)
+        ]
