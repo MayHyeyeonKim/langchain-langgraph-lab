@@ -17,3 +17,16 @@ uv run python training/prepare_dataset.py training/example_dataset.jsonl
 
 Every row uses three non-empty strings: `instruction`, `input`, and `output`. Build a held-out
 evaluation set before training; do not train and assess the model on the same examples.
+
+## Starter train/eval split
+
+The small included split demonstrates the correct separation. It is for learning the format only,
+not sufficient for fine-tuning a useful model.
+
+```bash
+uv run python training/prepare_dataset.py training/data/train.jsonl
+uv run python training/prepare_dataset.py training/data/eval.jsonl
+```
+
+Add real, reviewed RAG runs to `train.jsonl`. Keep different documents and scenarios in
+`eval.jsonl` so it remains an honest held-out evaluation set.
